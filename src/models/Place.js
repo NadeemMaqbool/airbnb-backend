@@ -22,10 +22,14 @@ const placeSchema = mongoose.Schema({
         type: String, 
         required: true 
     },
+    rooms: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Room"
+    }],
     address: { 
         type: String, 
         required: true 
-    },
+    },  
     created_at: {
         type: Date,
         default: Date.now,

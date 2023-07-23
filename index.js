@@ -1,15 +1,24 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 //import mongoose from 'mongoose';
+
 import cors from 'cors';
 import compression from 'compression';
 import http from 'http';
 import placesRoutes from './src/routes/places.js';
 import usersRoutes from './src/routes/user.js';
-import mongoose from 'mongoose';
-import dotenv from "dotenv";
+import roomType from './src/routes/roomType.js';
+import rent from './src/routes/rent.js';
+import room from './src/routes/room.js';
+import bookings from './src/routes/bookings.js';
+import amenities from "./src/routes/amenities.js";
+import search from "./src/routes/search.js";
+import {config} from "dotenv";
+import { connectDb } from './src/utils/database.js';
 
-dotenv.config();
+config();
+
+connectDb();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -30,9 +39,17 @@ app.use((req, res, next) => {
     next();
 });
 
-/* Places Routes */
+/* All Routes */
 app.use('/api/places', placesRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/room-types', roomType)
+app.use('/api/rent', rent)
+app.use('/api/room', room)
+app.use('/api/booking', bookings)
+app.use('/api/amenities', amenities)
+
+app.use('/api/search', search);
+
 /** error handling */
 app.use((error, req, res, next) => {
     if (res.headersSent) return next(error)
@@ -41,20 +58,6 @@ app.use((error, req, res, next) => {
         .json({ error: error.message || 'An unknown error occurred.'});
 });
 
-
-/* connect to mongodb */
-const dbConnect = (async () => {
-    try {
-        await mongoose.connect(process.env.MONGODB_URI)
-        console.log("Db connected successfully")
-    } catch (error) {
-        throw error
-    }
-})
-
-
-
 http.createServer(app).listen(PORT, () => {
-    dbConnect();
     console.log(`Server started at port ${PORT}`);
 });

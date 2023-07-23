@@ -1,5 +1,5 @@
-import { Error } from "mongoose";
 import placeModel from "../models/Place.js"
+import roomObj from "../models/room.js"
 import mongoose from "mongoose";
 import {validationResult } from 'express-validator';
 
@@ -21,19 +21,22 @@ const newPlace = async (req, res) => {
         country: req.body.country,
         address: req.body.address
     }       
-
-    try {
-        await placeModel.create(data);
-        res.status(200).json(data);
-    } catch(error) {
-        res.status(500).json(data);
-        console.log(error)
-    }
+    
+    await placeModel.create(data)
+        .then((place) => {
+            res.status(200).json(place);
+        })
+        .catch((error) => {
+            console.log(error)
+            res.status(500).json({
+                error: "Error creating place"
+            });
+        })
 }
 
 const deletePlace = async (req, res) => {
     try {
-        const placeId = req.params.id
+        const placeId = req.params.id*-+
         await placeModel.findByIdAndDelete(placeId)
         .then(() => {
             res.status(200).json({
@@ -49,16 +52,36 @@ const deletePlace = async (req, res) => {
     }
 }
 
-// get single place by id
+// get single place by id: Getting rooms by applying joins to rooms list
 const getSinglePlace = async (req, res) => {
     try {
         const placeId = req.params.id
-        
-        await placeModel.findById(placeId)
-        .then((place) => {
-            res.status(200).json(place)
+        await placeModel.aggregate([
+            {
+                $match: { _id: new mongoose.Types.ObjectId(placeId) },
+            },
+            {
+                $lookup: {
+                from: 'amenities',
+                localField: '_id',
+                foreignField: 'hotel',
+                as: 'amenities'
+                },
+            }
+        ])
+        .then(async (place) => {
+            const roomData = await roomObj.find({hotelId: placeId})
+                .populate('roomTypeId')
+                .exec()
+            
+            if (roomData.length > 0) {
+                place[0].rooms_data = roomData
+                return res.status(200).json(place)
+            }    
+            res.status(500).json(place)
         })
     } catch(error) {
+        console.error(error)
         res.status(500).json({
             message: 'Error while retrieving the specified place'
         })
@@ -67,11 +90,32 @@ const getSinglePlace = async (req, res) => {
 
 const getAllPlaces = async (req, res) => {
     try {
-        await placeModel.find()
-        .then((places) => {
-            res.status(200).json(places)
+        const places =  await placeModel.aggregate([
+            {
+                $lookup: {
+                from: 'amenities',
+                localField: '_id',
+                foreignField: 'hotel',
+                as: 'amenities'
+                },
+            },
+        ])
+        const promises = places.map(async (place) => {
+            const rooms = await roomObj.find({hotelId: place._id})
+            .populate('roomTypeId')
+            if (rooms.length > 0) {
+                place.rooms_data = rooms.sort((a, b) => a.roomTypeId?.price - b.roomTypeId?.price);
+                return place
+            }  
+            place.rooms_data = []
+            return place
         })
+
+        const updatedPlaces = await Promise.all(promises)
+        return res.status(200).json(updatedPlaces)
+        
     } catch(error) {
+        console.error(error)
         res.status(500).json({
             message: 'Error while retrieving the places'
         })

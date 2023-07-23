@@ -6,7 +6,6 @@ dotenv.config()
 const SECRET_KEY = process.env.TOKEN_SECRET
 
 const authenticatToken = (req, res, next) => {
-    next()
     const jwtToken = req.headers?.authorization?.split(" ")[1];
     if (!jwtToken) {
         return res.status(403).send({
@@ -16,7 +15,7 @@ const authenticatToken = (req, res, next) => {
     
     jwt.verify(jwtToken, SECRET_KEY, (err, user) =>{
         if (err) {
-            return res.status(403).send({
+            res.status(403).send({
                 message: "Authentication failed"
             })
         }

@@ -10,16 +10,10 @@ const placesRoutes = express.Router();
 placesRoutes.get('/', getAllPlaces)
 
 // GET /places/:id
-placesRoutes.get('/:id', authenticatToken, getSinglePlace)
+placesRoutes.get('/:id',  getSinglePlace)
 
 // Save new place
-placesRoutes.post('/', authenticatToken, [
-    query("title").notEmpty(),
-    query("description").notEmpty(),
-    query("address").notEmpty(),
-    query("city").notEmpty(),
-    query("country").notEmpty(),
-], newPlace)
+placesRoutes.post('/', newPlace)
 
 placesRoutes.put('/:id', authenticatToken, updateSinglePlace)
 
