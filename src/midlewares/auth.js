@@ -1,28 +1,34 @@
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
+import User from "../models/User.js"
 
 dotenv.config()
 
-const SECRET_KEY = process.env.TOKEN_SECRET
+const secret = process.env.TOKEN_SECRET
 
-const authenticatToken = (req, res, next) => {
-    const jwtToken = req.headers?.authorization?.split(" ")[1];
+const authenticatToken = async (req, res, next) => {
+    const {authorization} = req.headers;
+    const jwtToken = authorization.split(' ')[1]
+    
     if (!jwtToken) {
         return res.status(403).send({
-            message: "Unauthenticated access"
+            error: "Unauthenticated access"
+        })
+    }
+
+    try {
+        const {_id} = jwt.verify(jwtToken, secret)
+        req.user = await User.findOne({_id}).select('_id')
+
+        next();
+        
+    } catch (err) {
+        console.error(err)
+        return res.status(401).json({
+            error: "Authentication failed"
         })
     }
     
-    jwt.verify(jwtToken, SECRET_KEY, (err, user) =>{
-        if (err) {
-            res.status(403).send({
-                message: "Authentication failed"
-            })
-        }
-
-        req.user = user
-        next();
-    })
 }
 
 export default authenticatToken

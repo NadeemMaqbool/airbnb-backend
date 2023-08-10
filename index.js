@@ -1,6 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-//import mongoose from 'mongoose';
+import cookieParser from 'cookie-parser';
 
 import cors from 'cors';
 import compression from 'compression';
@@ -31,7 +31,7 @@ app.use(cors({
 app.use(compression());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Header', 'POST, GET, PUT, DELETE, OPTIONS');

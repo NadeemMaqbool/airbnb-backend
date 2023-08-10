@@ -1,6 +1,5 @@
 import mongoose, {Schema} from 'mongoose'
 
-
 const UserSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     first_name: {
@@ -14,7 +13,8 @@ const UserSchema = mongoose.Schema({
     },
     email: {
         type: String,
-        length: 40
+        length: 40,
+        unique: true
     },
     password: {
         type: String,
@@ -25,6 +25,10 @@ const UserSchema = mongoose.Schema({
         type: String,
         length: 64,
         default: null,
+    },
+    status: {
+        type: Boolean,
+        default: false
     },
     created_at: {
         type: Date,
