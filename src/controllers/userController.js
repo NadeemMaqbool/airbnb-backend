@@ -79,4 +79,16 @@ const getUser = async (req, res) => {
     })
 }
 
-export {registerUser, login, getUser}
+const getAllUsers = async (req, res) => {
+   try {
+        const users = await userModel.find()
+
+        res.status(200).json(users)
+   } catch (err) {
+        console.error(err.message)
+        res.status(400).json({error: "Unable to retrieve users, "})
+   }
+    
+}
+
+export {registerUser, login, getUser, getAllUsers}
