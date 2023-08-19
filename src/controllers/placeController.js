@@ -5,18 +5,11 @@ import {validationResult } from 'express-validator';
 
 // save place in db
 const newPlace = async (req, res) => {
-    // const newPlaceValidationResult = validationResult(req)
-    // console.log(newPlaceValidationResult)
-    // if (!newPlaceValidationResult.isEmpty()) {
-    //     return res.send({
-    //         errors: newPlaceValidationResult.array()
-    //     })
-    // }
     const data = {
         _id: new mongoose.Types.ObjectId(),
         title: req.body.title,
         description: req.body.description,
-        image_url: req.body.imgUrl,
+        image_url: req.body.image_url,
         city: req.body.city,
         country: req.body.country,
         address: req.body.address
@@ -36,19 +29,21 @@ const newPlace = async (req, res) => {
 
 const deletePlace = async (req, res) => {
     try {
-        const placeId = req.params.id*-+
+        const placeId = req.params.id
         await placeModel.findByIdAndDelete(placeId)
         .then(() => {
             res.status(200).json({
                 message: 'Place was successfully deleted'
             })
         })
-        .catch(error => {
-            throw new Error(error)
+        .catch((error) => {
+            res.status(400).json({
+                error: error.message
+            })
         });
     } catch(error) {
-        res.status(500).json({message: 'Error removing the specified place'})
         console.error(error)
+        res.status(500).json({message: 'Error removing the specified place'})
     }
 }
 
@@ -90,15 +85,24 @@ const getSinglePlace = async (req, res) => {
 
 const getAllPlaces = async (req, res) => {
     try {
-        const places =  await placeModel.aggregate([
+        let updatedPlaces = {};
+        let page = parseInt(req.query.page)
+        let limit = parseInt(req.query.limit)
+        let skip = (page - 1) * limit
+        const totalItems = await placeModel.countDocuments({}).exec()
+        
+        const places =  await placeModel
+            .aggregate([
             {
                 $lookup: {
-                from: 'amenities',
-                localField: '_id',
-                foreignField: 'hotel',
-                as: 'amenities'
+                    from: 'amenities',
+                    localField: '_id',
+                    foreignField: 'hotel',
+                    as: 'amenities'
                 },
             },
+            { $skip: skip },
+            { $limit: limit}
         ])
         const promises = places.map(async (place) => {
             const rooms = await roomObj.find({hotelId: place._id})
@@ -110,9 +114,17 @@ const getAllPlaces = async (req, res) => {
             place.rooms_data = []
             return place
         })
-
-        const updatedPlaces = await Promise.all(promises)
-        return res.status(200).json(updatedPlaces)
+        
+        await Promise.all(promises).then((records) => {
+            updatedPlaces.records = records
+            updatedPlaces.total = totalItems
+            return res.status(200).json(updatedPlaces)
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                error: err.message
+            })
+        })
         
     } catch(error) {
         console.error(error)
@@ -128,7 +140,7 @@ const updateSinglePlace = async (req, res) => {
     const data = {
         title: req.body.title,
         description: req.body.description,
-        image_url: req.body.imgUrl,
+        image_url: req.body.image_url,
         city: req.body.city,
         country: req.body.country,
         address: req.body.address

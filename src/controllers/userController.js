@@ -40,7 +40,7 @@ const login = async (req, res) => {
 
     if (!email || !password) { 
         return res.status(401).json({
-            error: "Eihter email or password is wrong"
+            error: "Eithter email or password is wrong"
         })
     }
 
@@ -55,7 +55,7 @@ const login = async (req, res) => {
             !((user?.email === email) && bcrypt.compareSync(password, user?.password))
         ) {
             return res.status(401).json({
-                error: "Eihter email or password is wrong"
+                error: "Eithter email or password is wrong"
             })    
         }
 
@@ -77,6 +77,10 @@ const getUser = async (req, res) => {
     res.status(200).json({
         user
     })
+}
+
+const logoutUser = async (req, res) => {
+    
 }
 
 const getAllUsers = async (req, res) => {
