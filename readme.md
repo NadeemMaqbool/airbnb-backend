@@ -2,8 +2,8 @@
 TODOS
 ```
 ```
+- Room plus relation with the hotels
 - Search Hotel
-- Skeleton structure for loading
 - Bookings
 - Payments
 - Users
@@ -19,5 +19,6 @@ TODOS
 - ~~Authorization middleware using JWT~~
 - ~~Renting for each room type~~
 - ~~Hotels connection with rooms~~
-- ~~room relationship with room types~~
+- ~~ Rooms ~~
 - ~~Ameneties and hotel connection with amenities~~
+- ~~- Skeleton structure for loading~~

@@ -2,27 +2,67 @@ import placeModel from "../models/Place.js"
 import roomObj from "../models/room.js"
 import mongoose from "mongoose";
 import {validationResult } from 'express-validator';
+import { v4 as uuidv4, validate as uuidValidate } from 'uuid';
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import { hotelAmenitiesStore, getHotelAmenities, getAmenityById } from "../services/amenityServices.js"
+import dotenv from "dotenv"
+
+dotenv.config()
+
+const bucketName = process.env.BUCKET_NAME
+const bucketRegion = process.env.BUCKET_REGION
+const accessKey = process.env.ACCESS_KEY
+const secretAccessKey = process.env.SECRET_ACCESS_KEY
+
+/*
+    initialize the s3 client to perform operations like PUT and DELETE
+*/
+const s3Client = new S3Client({
+    credentials: {
+        accessKeyId: accessKey,
+        secretAccessKey: secretAccessKey
+    },
+    region: bucketRegion
+});
 
 // save place in db
 const newPlace = async (req, res) => {
+    const randomStringName = uuidv4()
+    const amenities = JSON.parse(req.body.amenities)
     const data = {
         _id: new mongoose.Types.ObjectId(),
         title: req.body.title,
         description: req.body.description,
-        image_url: req.body.image_url,
         city: req.body.city,
         country: req.body.country,
-        address: req.body.address
+        address: req.body.address,
+        image_url: randomStringName,
+        refundable: req.body.refundable,
+        payLater: req.body.payLater,
+        signupDiscount: req.body.signupDiscount,
     }       
-    
+    const params = {
+        Bucket: bucketName,
+        Key: randomStringName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype
+    }
+
+    const media = new PutObjectCommand(params)
+    await s3Client.send(media)
+
     await placeModel.create(data)
         .then((place) => {
+            if (amenities.length > 0) {
+                hotelAmenitiesStore(amenities, place._id)
+            }
             res.status(200).json(place);
         })
         .catch((error) => {
-            console.log(error)
+            console.log(error.errors)
             res.status(500).json({
-                error: "Error creating place"
+                error: error.errors
             });
         })
 }
@@ -94,30 +134,51 @@ const getAllPlaces = async (req, res) => {
         const places =  await placeModel
             .aggregate([
             {
-                $lookup: {
-                    from: 'amenities',
-                    localField: '_id',
-                    foreignField: 'hotel',
-                    as: 'amenities'
-                },
-            },
+                $sort: { created_at: -1 }
+            },    
+            // {
+            //     $lookup: {
+            //         from: 'hotelamenities',
+            //         localField: '_id',
+            //         foreignField: 'hotelId',
+            //         as: 'amenities'
+            //     },
+            // },
             { $skip: skip },
             { $limit: limit}
+            
         ])
         const promises = places.map(async (place) => {
             const rooms = await roomObj.find({hotelId: place._id})
-            .populate('roomTypeId')
+                .populate('roomTypeId')
+            
+            place.imageUrl = null 
+
+            if (uuidValidate(place.image_url)) {
+                const params = {
+                    Bucket: bucketName,
+                    Key: place.image_url
+                }
+                const command = new GetObjectCommand(params)
+                place.imageUrl = await getSignedUrl(s3Client, command, {expiresIn: 3600})
+            }
+            
             if (rooms.length > 0) {
                 place.rooms_data = rooms.sort((a, b) => a.roomTypeId?.price - b.roomTypeId?.price);
                 return place
             }  
+            
+            let hotelAmenities = await getHotelAmenities(place._id)
+            
             place.rooms_data = []
+            place.amenities = hotelAmenities
             return place
         })
         
         await Promise.all(promises).then((records) => {
             updatedPlaces.records = records
             updatedPlaces.total = totalItems
+
             return res.status(200).json(updatedPlaces)
         })
         .catch((err) => {
@@ -143,7 +204,10 @@ const updateSinglePlace = async (req, res) => {
         image_url: req.body.image_url,
         city: req.body.city,
         country: req.body.country,
-        address: req.body.address
+        address: req.body.address,
+        refundable: req.body.refundable,
+        payLater: req.body.payLater,
+        signupDiscount: req.body.signupDiscount,
     }
 
     await placeModel.findByIdAndUpdate(placeId, data, {new: true})
@@ -157,4 +221,5 @@ const updateSinglePlace = async (req, res) => {
     });
 
 }
+
 export { newPlace, getSinglePlace, deletePlace, getAllPlaces, updateSinglePlace };

@@ -5,22 +5,22 @@ const placeSchema = mongoose.Schema({
     title: {
         type: String,
         length: 100,
-        required: true 
+        required: [true, "Title is a required field"] 
     },
     description: { 
         type: String, 
-        required: true 
+        required: [true, "Description is a required field"] 
     },
     image_url: {
         type: String 
     },
     city: { 
         type: String, 
-        required: true 
+        required: [true, "City is a required field"] 
     },
     country: { 
         type: String, 
-        required: true 
+        required: [true, "Country is a required field"]  
     },
     rooms: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -28,8 +28,20 @@ const placeSchema = mongoose.Schema({
     }],
     address: { 
         type: String, 
-        required: true 
+        required: [true, "Address is a required field"]
     },  
+    refundable: {
+        type: Boolean, 
+        default: false
+    },
+    payLater: {
+        type: Boolean, 
+        default: false
+    },
+    signupDiscount: {
+        type: Boolean,
+        default: false
+    },
     created_at: {
         type: Date,
         default: Date.now,

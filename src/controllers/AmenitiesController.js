@@ -4,8 +4,7 @@ import Amenity from "../models/Amenity.js"
 const create = async (req, res) => {
     const data = {
         _id: new mongoose.Types.ObjectId(),
-        name: req.body.name,
-        hotel: req.body.hotelId
+        name: req.body.name
     }
 
     await Amenity.create(data)
